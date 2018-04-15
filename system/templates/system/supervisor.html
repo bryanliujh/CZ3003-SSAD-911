@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static from staticfiles %}
+
+{% block body %}
+
+{% block javascript %}
+  <script>
+	  var selectedReportID = -1;
+	  var reportList = 0;
+	  var cache = 0;
+	  var selected = 0;
+
+	  var username = '{{ username }}';
+	  var ModifyURL = -1;
+	  var DeleteURL = -1;
+	  var SendToCMOURL = -1;
+		
+	  var initialTimeOut;
+	  
+	function loadForm(reportID){
+		var report = cache[reportID];
+		var formElement =  $("#report");
+		var titleElement = formElement.find('#fname');
+		var locationElement = formElement.find('#lname');
+		var eLvlElement = formElement.find('#eLvl');
+		var detailElement = formElement.find('#detail');
+		
+		titleElement.val(report.fields.title)
+		locationElement.val(report.fields.location)
+		eLvlElement.val(report.fields.emergency_level)
+		detailElement.val(report.fields.detail)
+		
+        if( report.fields.status == 'authenticatedByCMOLO' || document.getElementById("eLvl").value != 3 ) {
+          document.getElementById("authenticateBtn").disabled = true;
+          document.getElementById("sendCMObtn").disabled = false;
+        } else {
+          document.getElementById("authenticateBtn").disabled = false;
+          document.getElementById("sendCMObtn").disabled = true;
+        }
+
+		selectedReportID = report.pk
+		DeleteURL = "{% url 'system:deleteReport' myPk=1234 %}".replace(/1234/, selectedReportID.toString());
+		SendToCMOURL = "{% url 'system:sendToCMO' myPk=1234 %}".replace(/1234/, selectedReportID.toString());
+		
+	}
+
+	function pullSupervisorReports(shouldLoadForm=false){
+      $.ajax({
+        url: '/ajax/supervisor_reports/',
+        data: {
+          'username': username
+        },
+        dataType: 'json',
+        success: function (data) {
+			cache = data;
+			reportList.empty();
+			data.forEach((report, index) => {
+				 var li = document.createElement("li");
+				 if( report.fields.emergency_level == 3 ) {
+						li.className += "list-group-item list-group-item-danger";
+					} else if( report.fields.emergency_level == 2) {
+						li.className += "list-group-item list-group-item-warning";
+					} else {
+						li.className += "list-group-item list-group-item-info";
+					}
+				 li.innerHTML += "<a class='reportItem'> " + report.fields.title + " @ " +report.fields.location + "\n" + report.fields.datetime.substring(0,10) + ' ' + report.fields.datetime.substring(11,19) + " </a>";
+				 reportList.append(li);
+			});//end of for each
+						$('#myUL li').click(function(){ loadForm($(this).index()); selected = $(this).index();});
+						if(shouldLoadForm){ loadForm(selected); }
+						console.log(selected)
+			}//end of ajax success
+			
+		});//end of ajax call
+	}//end of pullSupervisorReports
+
+	$('document').ready(function(){
+		reportList = $("#myUL");
+		pullSupervisorReports(false);
+		setInterval(pullSupervisorReports, 10000);
+		initialTimeOut = setTimeout(loadFormInitial, 500);
+        
+        // Disable location selection
+         document.getElementById("lname").disabled='true';
+	}); //end of document ready
+	
+  function loadFormInitial(){
+	  if(cache[selected]){ loadForm(selected)}
+      else if (cache[0]) { loadForm(0)}; 
+	  clearTimeout(initialTimeOut);
+  }
+  
+  function checkAuthentication() {
+	username = document.getElementById("uname").value;
+	password = document.getElementById("psw").value;
+	pk = cache[selected]['pk']
+	
+    $.ajax({
+      type: 'POST',
+      url: '/ajax/check_Authentication/',
+	  
+      data:  {
+				'csrfmiddlewaretoken' : '{{ csrf_token }}',
+				'uname' : username,
+				'psw' : password,
+				'pk': pk
+      },
+      success: function(data) {
+        alert("CMO LO successfully authenticate level 3 crisis !");
+        document.getElementById("authenticateBtn").disabled = true;
+        document.getElementById("sendCMObtn").disabled = false;
+      },
+	  error: function (XMLHttpRequest, textStatus, errorThrown) {
+			alert('Authentication error!');
+		}
+    });
+	username = '{{ username }}' //somehow the username variable in the javascript becomes CMO_LO, so we need to set it back to the supervisor
+  }
+
+	function executeModifyReport(){
+		var formElement =  $("#report");
+		var titleElement = formElement.find('#fname');
+		var locationElement = formElement.find('#lname');
+		var eLvlElement = formElement.find('#eLvl');
+		var detailElement = formElement.find('#detail');
+
+		var title = titleElement.val()
+		var loc = locationElement.val()
+		var eLvl = eLvlElement.val()
+		var detail = detailElement.val()
+
+		var report = cache[selected];
+		selectedReportID = report.pk
+		$.ajax({
+			type: 'POST',
+			url: '/ajax/modify_Report/',
+			dataType: 'json',
+			data:  {
+				'csrfmiddlewaretoken' : '{{ csrf_token }}',
+				'pk' : selectedReportID,
+				'detail': detail,
+				'title': title,
+				'location': loc,
+				'emergency_level': eLvl
+			},
+
+			success: function( data ) {
+				alert( "Incident Report is succesfully updated!" );
+				pullSupervisorReports(true);
+			},
+			
+
+		})
+
+	}
+
+  </script>
+{% endblock %}
+
+  <div class="content-wrapper" style="margin-bottom: 75px; margin-left: 0px; margin-top: 30px;">
+    <div class="container-fluid">
+      <div class="row">
+  <div class="column">
+    <ul class="list-group" id="myUL"></ul>
+  </div>
+  <div class="column2">
+    <form action="/action_page.php" id="report">
+			{% csrf_token %}
+                <label for="rname">Report Title</label>
+                <input class="supReport" type="text" id="fname" name="Title" value="">
+
+                <label for="location">Location</label>
+                <input class="supReport" type="text" id="lname" name="lastname" value="">
+
+                <label for="eLvl">Emergency Level</label>
+                    <select class="supReport" id="eLvl" name="EmergencyLevel">
+                        <option value="1" selected>Level 1</option>
+                        <option value="2">Level 2</option>
+                        <option value="3">Level 3</option>
+                    </select>
+
+                <label for="detail">Details</label>
+               <textarea class="supReport" id="detail" name="detail" style="height:200px"></textarea>
+
+                <button id="sendCMObtn" class="btn btn-primary btn-sm" type="button" name="sendToCMO" form="report" onclick="location.href=SendToCMOURL"> Send To CMO </button>
+                <button class="btn btn-primary btn-sm" type="button" name="modify" form="report" onclick="executeModifyReport()">Modify</button>
+                <button class="btn btn-primary btn-sm" type="button" name="delete" form="report" onclick="location.href=DeleteURL">Delete</button>
+
+            </form>
+             <!-- Button to open the modal login form -->
+				<button id="authenticateBtn" type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#id01">Authenticate</button>
+
+				<!-- The Modal -->
+				<div class="container">
+				<div class="modal fade" id="id01" role="dialog">
+					<div class="modal-dialog">
+
+					  <!-- Modal content-->
+					  <div class="modal-content">
+						<div class="modal-header">
+						  <h4 class="modal-title">Authenticate</h4>
+						  <button type="button" class="close" data-dismiss="modal">&times;</button>
+						</div>
+						<div class="modal-body">
+							<form class="modal-content animate" method="POST" action="" style="border-style: none;">
+								{% csrf_token %}
+								<label for="uname"><b>Username</b></label>
+								<input class="supReport" id="uname" type="text" placeholder="Enter Username" name="uname" required="required"/>
+
+								<label for="psw"><b>Password</b></label>
+								<input class="supReport" id="psw" type="password" placeholder="Enter Password" name="psw" required="required"/>
+
+								<button  class="btn btn-primary btn-sm" type="button" onclick="checkAuthentication()" data-dismiss="modal">Authenticate</button>
+
+							</form>
+						</div>
+						<div class="modal-footer">
+						  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+						</div>
+					  </div>
+
+					</div>
+				</div>
+				</div>
+
+
+
+
+  </div>
+</div>
+
+</div>
+	<script> </script>
+  </div>
+{% endblock body %}

@@ -1,0 +1,72 @@
+<style>
+* {
+box-sizing: border-box;
+}
+
+/* Create two equal columns that floats next to each other */
+.column {
+float: left;
+width: 50%;
+padding: 10px; /* Should be removed. Only for demonstration */
+}
+
+.column2 {
+float: left;
+width: 50%;
+padding: 10px;
+}
+
+/* Clear floats after the columns */
+.row:after {
+content: "";
+display: table;
+clear: both;
+}
+
+#myUL {
+list-style-type: none;
+width: 100%;
+height: 500px;
+padding: 0;
+margin: 0;
+overflow: hidden;
+overflow-y:scroll;
+}
+
+#myUL li a {
+border: 1px solid #ddd;
+margin-top: -1px; /* Prevent double borders */
+background-color: #f6f6f6;
+padding: 12px;
+text-decoration: none;
+font-size: 18px;
+color: black;
+display: block
+}
+
+#myUL li a:hover:not(.header) {
+background-color: #eee;
+}
+
+.supReport{
+width: 100%;
+padding: 12px;
+border: 1px solid #ccc;
+border-radius: 4px;
+box-sizing: border-box;
+margin-top: 6px;
+margin-bottom: 16px;
+resize: vertical;
+}
+
+#authenticate {
+  margin-top: 6px;
+}
+
+.container {
+    width: 80%;
+    padding: 16px;
+}
+
+
+</style>

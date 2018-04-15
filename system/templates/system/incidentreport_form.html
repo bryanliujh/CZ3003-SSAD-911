@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% block title %}Create Incident Report{% endblock %}
+
+{% block body %}
+
+{% block javascript %}
+
+<style>
+/* Center the loader */
+#loader {
+  z-index: 1;
+  width: 5px;
+  height: 5px;
+  border: 10px solid #f3f3f3;
+  border-radius: 75%;
+  border-top: 10px solid #3498db;
+  -webkit-animation: spin 2s linear infinite;
+  animation: spin 2s linear infinite;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#map-canvas {
+    width: 90%;
+    height: 90%;
+    margin: 30px auto 0px auto;
+}
+</style>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB3Kxq79v1JFhRBQH7n4QDH-5p008NZayg&libraries=places" type="text/javascript"></script>
+<script>
+
+    var longitude;
+    var latitude;
+
+    var x;
+    var phoneFlag = false;
+    
+    
+    // API for Phone number - location checking
+    function checkPrankCall( obj ) {
+         var phoneNum = document.getElementById("phone_number").value;
+         var loc = document.getElementById("location").value;
+         
+         console.log( "phoneNum: " + phoneNum );
+         console.log( "loc:  " + loc );
+         
+         var validAddress = [
+            { phone_number : "97441955", loc : "Nanyang Technological University, Singapore" },
+            { phone_number : "91259185", loc : "Nanyang Polytechnic, Singapore" },
+            { phone_number : "91649495", loc : "Geylang Serai, Singapore" }
+         ];
+         
+         // Check if the phone number is numerical and is not empty
+         if( isNaN( phoneNum ) == false && phoneNum != "" && loc != "") {
+            
+            for( var key in validAddress ) {
+                var phone_val = validAddress[key].phone_number;
+                var location_val = validAddress[key].loc;
+                
+                //console.log( "phone val: " + phone_val );
+                //console.log( "Location val: " + location_val );
+                
+                if( phoneNum == phone_val && loc == location_val ) {
+                    alert( "Report is successfully verified!" );
+                    document.getElementById("createBtn").disabled = false;
+                    return true;
+                }
+            }
+            
+            alert( "Error Processing - Prank Call Detected!" );
+            return false;
+            
+         }
+         else {
+            alert( "Error Processing - Prank Call Detected!" );
+            document.getElementById("createBtn").disabled = true;
+         }
+    }
+
+    function loadPhonenum() {
+        document.getElementById("failed_phone_check").style.display = "none";
+        document.getElementById("success_phone_check").style.display = "none";
+        document.getElementById("loader_phone").style.display = "block";
+        myVar = setTimeout(checkPhoneNumber, 300);
+    }
+    
+
+    function checkPhoneNumber( obj ) {
+        document.getElementById("loader_phone").style.display = "none";
+         var phoneNum =  document.getElementById("phone_number").value;
+         var pattern = /^\d{8}$/;
+         //document.write("Phone number: " + phoneNum );
+         // Check if the phone number is numerical and is not empty
+         if( isNaN( phoneNum ) == false && phoneNum != "" && phoneNum.match(pattern) ) {
+            //alert( "Phone number is successfully verified!" );
+            document.getElementById("success_phone_check").style.display = "block";
+            //document.getElementById("createBtn").disabled = false;
+            phoneFlag = true;
+         }
+         else {
+            //alert( "Phone number is NOT verified!" );
+            document.getElementById("failed_phone_check").style.display = "block";
+            //document.getElementById("createBtn").disabled = true;
+            phoneFlag = false;
+         }
+         
+        // checkButton();
+         
+    }
+    
+    function checkButton() {
+        if( phoneFlag ) {
+            document.getElementById("createBtn").disabled = false;
+        }
+        else {
+            document.getElementById("createBtn").disabled = true;
+        }
+    }
+
+	$('document').ready(function(){
+		 document.getElementById("createBtn").disabled = true;
+         
+        x = document.getElementById("phone_number");
+        x.addEventListener("focusout", loadPhonenum);
+        
+        document.getElementById("loader_phone").style.display = "none";
+        document.getElementById("success_phone_check").style.display = "none";
+        loadPhonenum();        
+        
+        // Reset
+        phoneFlag = false;
+        
+        //===================================== Map============================
+         var map = new google.maps.Map(document.getElementById("map-canvas"), {
+            center: {
+                lat: 1.3483099,
+                lng: 103.68313469999998
+            },
+            zoom: 16
+        });
+
+        var marker = new google.maps.Marker ({
+            position: {
+                lat: 1.3483099,
+                lng: 103.68313469999998
+            },
+            map:map,
+            draggable: true
+        });
+
+        var searchBox = new google.maps.places.SearchBox( document.getElementById("location") );
+
+        google.maps.event.addListener( searchBox, 'places_changed', function() {
+            var places = searchBox.getPlaces();
+            var bounds = new google.maps.LatLngBounds();
+            var i, place;
+
+            for( i=0; place=places[i];i++ ) {
+                console.log( place.geometry.location );
+                console.log( place.geometry.location.lat() );
+                console.log( place.geometry.location.lng() );
+
+                latitude = place.geometry.location.lat();
+                longitude = place.geometry.location.lng();
+
+                document.getElementById("latitude").value = place.geometry.location.lat();
+                document.getElementById("longitude").value = place.geometry.location.lng();
+                
+                console.log( "Latitide: " + document.getElementById("latitude").value );
+                console.log( "Longitude: " + document.getElementById("longitude").value );
+
+                bounds.extend( place.geometry.location );
+                marker.setPosition( place.geometry.location );
+
+            }
+
+            map.fitBounds( bounds );
+            map.setZoom( 16 );
+        });
+        
+        document.getElementById("phone_number").oninput = function() {
+            document.getElementById("createBtn").disabled = true;   
+        }
+    
+        document.getElementById("location").oninput = function() {
+            document.getElementById("createBtn").disabled = true;
+        }
+       
+	}); //end of document ready
+
+</script>
+{% endblock javascript %}
+
+	<!-- Breadcrumbs-->
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="operator-form.html">NESIMS-911</a>
+        </li>
+        <li class="breadcrumb-item active">Incident Report Form</li>
+      </ol>
+    <!--Create Incident Report Form-->
+    
+    <div class="content-wrapper" style="margin-bottom: 75px; margin-left: 0px; margin-top: 30px;">
+    <div class="container-fluid">
+        <div class="row">
+    <div class="column">
+            <div id="map-canvas"></div>
+    </div>
+    <div class="column2">
+      <div class="card card-register mx-auto mt-5">
+        <div class="card-header">Incident Report</div>
+        <div class="card-body">
+			<form action="" method ="post" enctype="multipart/form-data">
+			{% csrf_token %}
+			{% for field in form.visible_fields %}
+				<div class="form-group">
+					<div class="form-group">
+						{% if field.html_name == "phone_number" %}
+							<label class="control-label col-sm-10" for="report_title">{{ field.label_tag }}</label>
+                            <button class="btn btn-default" disabled>
+                            <span id="loader_phone"></span>
+                            <span id="success_phone_check" class="glyphicon glyphicon-ok" style="color:green"></span>
+							<span id="failed_phone_check" class="glyphicon glyphicon-remove" style="color:red"></span></button>
+							<div class="col-sm-12">{{ field }} </div>
+						{% else %}
+							<label class="control-label col-sm-4" for="report_title">{{ field.label_tag }}</label>
+							<div class="col-sm-12">{{ field }}</div>
+						{% endif %}
+					</div>
+				</div>
+			{% endfor %}
+            {% for hidden_field in form.hidden_fields %}
+                {{ hidden_field.errors }}   
+                {{ hidden_field }}
+            {% endfor %}
+            <button id="verifyBtn" type="button" class="btn btn-primary btn-block" onclick="checkPrankCall(this)">Verify</button>
+            <button id="createBtn" class="btn btn-primary btn-block" type="submit">Create</button>
+          </form>
+
+        </div>
+      </div>
+    </div>
+    </div>
+    </div>
+    </div>
+{% endblock %}
